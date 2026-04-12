@@ -72,9 +72,11 @@ Version definitions live in one of: `version.py` (canonical constant, e.g. `PYTO
 
 ## Project-specific skills
 
-Two workflow skills live in `.claude/skills/`:
+Four workflow skills live in `.claude/skills/`:
 
 - **`jetson-pr.md`** — full PR workflow (branch naming, PR template, `dev` targeting).
 - **`upgrade-package.md`** — version-bump workflow (where versions are defined, what to preserve).
+- **`new-package.md`** — step-by-step guide for scaffolding a new package (Dockerfile header, `config.py`, test file).
+- **`triage-build-failure.md`** — how to diagnose and fix a failing `jetson-containers build` run (log reading, dependency tracing, layer cache busting).
 
-Reach for these when the user asks to open a PR or upgrade a package.
+Reach for these when the user asks to open a PR, upgrade a package, add a new package, or debug a build failure.
