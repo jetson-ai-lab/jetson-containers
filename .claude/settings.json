@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "guide@claude-code-guide": true
+  }
+}
