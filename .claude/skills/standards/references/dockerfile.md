@@ -4,16 +4,16 @@ Apply when authoring or editing a package `Dockerfile` (`packages/*/*/Dockerfile
 
 ## RUN layering (`docker:S7031`)
 
-**Target: one install RUN per Dockerfile.** Merge aggressively. Sonar flags every consecutive-RUN pair, your image's layer count inflates with each RUN, and the Docker cache gets thinner the more you split. The earlier instinct to keep assimilai-vendored installs in separate `RUN`s "for provenance" was wrong — Docker layer boundaries are not the right place to record where code came from. Provenance lives in `.assimilai.toml` (source paths, sha256, `changes` notes); layer boundaries are just a cache-and-size knob. Don't conflate the two.
+**Target: one `RUN` per Dockerfile.** Merge aggressively. Sonar flags every consecutive-RUN pair, your image's layer count inflates with each RUN, and the Docker cache gets thinner the more you split. Docker layer boundaries are not the right place to record where code came from — provenance lives in `.assimilai.toml` (source paths, sha256, `changes` notes); layer boundaries are just a cache-and-size knob. Don't conflate the two.
 
 **How to merge cleanly:**
 - Concatenate install steps with `\` + `;` (or `&&` where you want short-circuit-on-fail) under a single `RUN set -eux; ...`.
 - Use `# === <section-name> ===` comments *inside* the `RUN` to mark each logical section, and point each section at its `[[sources.files]]` entry in `.assimilai.toml` so the next reader can still trace provenance.
-- Keep ONLY verification / live-check RUNs as separate layers — see "Build-time vs runtime checks" below. Those aren't installs; they assert on what the install layer produced.
+- **Fold the build-time verification (e.g. `python3 -c "import X; assert ..."`) in as the trailing section of the same RUN** when it's a simple inline check. A failed assertion still fails the RUN and fails the build — same behavior as a separate layer, one fewer flag. Only keep verification as its own `RUN` when it needs a distinct `COPY`, a different source tree, or `ARG`s the install layer doesn't already have.
 
 **Always** end apt-install steps with `apt-get clean && rm -rf /var/lib/apt/lists/*` *in the same `RUN`* that populated `/var/lib/apt/lists/`. Cleanup in a later layer doesn't reclaim the space.
 
-**Concrete exemplar:** `packages/multimedia/sound-utils/Dockerfile` bundles cuDNN + NVPL + cuDSS + cuSPARSELt + cuTENSOR + NCCL + torch + portaudio + soundfile/sounddevice into one `RUN`, with per-source `# === section ===` comments, and keeps the build-time torch-metadata check as its own (second) RUN. Result: 2 RUNs total, zero `docker:S7031` flags on the install side, full provenance preserved via `.assimilai.toml`.
+**Concrete exemplar:** `packages/multimedia/sound-utils/Dockerfile` is a **single `RUN`** — cuDNN + NVPL + cuDSS + cuSPARSELt + cuTENSOR + NCCL + torch + portaudio + soundfile/sounddevice + a trailing `torch.version.cuda is not None` verification — with per-source `# === section ===` comments pointing at `.assimilai.toml`. Zero `docker:S7031` flags, full provenance preserved.
 
 ## Bash in `RUN` + invoked scripts (`shelldre:S7688`)
 

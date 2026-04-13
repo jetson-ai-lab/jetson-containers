@@ -37,11 +37,11 @@ COPY cudastack_install_cudss.sh cudastack_install_cusparselt.sh \
      cudastack_install_cutensor.sh cudastack_install_nccl.sh \
      /tmp/cudastack/
 
-# One big install layer — per .claude/skills/standards/references/dockerfile.md
-# "RUN layering": merge install steps aggressively, keep `docker:S7031` quiet,
-# and minimise image layer count. Per-source provenance lives in .assimilai.toml
-# (source paths + sha256 + changes notes); each inline section below points at
-# its manifest entry.
+# Single install+verify layer — per .claude/skills/standards/references/dockerfile.md
+# "RUN layering": one RUN total when the verification is a trivial inline check.
+# Per-source provenance lives in .assimilai.toml (source paths + sha256 + changes);
+# each inline section below points at its manifest entry. The trailing metadata
+# assertion is deliberately folded in here so the Dockerfile has a single RUN.
 RUN set -eux; \
     # === cuDNN (adapted from packages/cuda/cudastack/install/install_cudnn.sh;
     # pinned 9.20.0 because upstream's 9.21.0 is a 404 on NVIDIA's CDN) ===
@@ -78,15 +78,12 @@ RUN set -eux; \
     # python audio libs) ===
     apt-get update && apt-get install -y portaudio*-dev && \
     uv pip install soundfile sounddevice; \
-    # === Final cleanup — single layer for the whole install. ===
-    rm -rf /var/lib/apt/lists/* && apt-get clean
-
-# Build-time verification is intentionally in its own RUN: it's not an install
-# step, it asserts on what the install layer produced. We check only metadata
-# (torch.version.cuda) — docker build isn't invoked with --gpus=all, so live
-# torch.cuda.is_available() belongs in test.py (runs with --gpus=all via
-# container.py::test_container).
-RUN python3 -c "import torch; \
+    # === Cleanup ===
+    rm -rf /var/lib/apt/lists/* && apt-get clean; \
+    # === Verification: torch wheel carries CUDA metadata. Metadata only;
+    # docker build isn't invoked with --gpus=all, so live torch.cuda.is_available()
+    # belongs in test.py (runs with --gpus=all via container.py::test_container). ===
+    python3 -c "import torch; \
 assert torch.version.cuda is not None, 'Installed torch wheel does not include CUDA support'; \
 print('torch', torch.__version__, 'built with CUDA', torch.version.cuda, 'cuDNN', torch.backends.cudnn.version()); \
 print('Build-time check OK: torch imports and reports CUDA-enabled build metadata')"
