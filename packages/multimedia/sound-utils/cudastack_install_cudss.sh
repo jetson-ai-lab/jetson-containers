@@ -3,9 +3,9 @@ set -eux
 
 echo "Installing cuDSS ${CUDSS_VERSION} via network repo"
 
-if [ "$CUDA_ARCH" = "tegra-aarch64" ] && [ "${CUDA_INSTALLED_VERSION}" -lt 132 ]; then
+if [[ "$CUDA_ARCH" == "tegra-aarch64" && "${CUDA_INSTALLED_VERSION}" -lt 132 ]]; then
     REPO_ARCH="arm64"
-elif [ "$(uname -m)" = "aarch64" ]; then
+elif [[ "$(uname -m)" == "aarch64" ]]; then
     REPO_ARCH="sbsa"
 else
     REPO_ARCH="x86_64"
@@ -23,7 +23,7 @@ apt-get update
 CUDSS_APT_VER=$(apt-cache madison cudss 2>/dev/null \
     | awk -v ver="${CUDSS_VERSION}" '$3 ~ ver {gsub(/^ +| +$/, "", $3); print $3; exit}')
 
-if [ -n "${CUDSS_APT_VER}" ]; then
+if [[ -n "${CUDSS_APT_VER}" ]]; then
     echo "Pinning cuDSS to version: ${CUDSS_APT_VER}"
     apt-get install -y --no-install-recommends "cudss=${CUDSS_APT_VER}"
 else

@@ -44,29 +44,37 @@ note    = "Required because torch's aarch64 wheels link against libnvpl_lapack_l
 [[sources.files]]
 from    = "install/install_cudss.sh"
 target  = "cudastack_install_cudss.sh"
-status  = "verbatim"
-sha256  = "5d5f822164e322b617aa1146b77d21721db55e1f61fc2d7eb78327c773e4ffdd"
+status  = "adapted"
+sha256  = "b447924af3cfea4907230c2a9fe6f4bdc1b8f5eab727e85295b6cb5e47612e03"
+upstream_sha256 = "5d5f822164e322b617aa1146b77d21721db55e1f61fc2d7eb78327c773e4ffdd"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
 note    = "Required because torch's aarch64 wheels link against libcudss.so.0. Discovered in build #3 via ImportError."
 
 [[sources.files]]
 from    = "install/install_cusparselt.sh"
 target  = "cudastack_install_cusparselt.sh"
-status  = "verbatim"
-sha256  = "4d9de6e67cf694d29f18b2b10bbb3814aa1fe4b0529cb7dedcf57e266df99bcd"
+status  = "adapted"
+sha256  = "6aa09ab9973e4f9f7a4c1ea14c8c243c708095a905864f127b08b6387ed7d1de"
+upstream_sha256 = "4d9de6e67cf694d29f18b2b10bbb3814aa1fe4b0529cb7dedcf57e266df99bcd"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
 note    = "Vendored pre-emptively; torch wheels typically link against libcusparseLt.so as well."
 
 [[sources.files]]
 from    = "install/install_cutensor.sh"
 target  = "cudastack_install_cutensor.sh"
-status  = "verbatim"
-sha256  = "411775b37db07d07fb8d545b7400626a3569bcaee4f28bc651e6e7429f99f97b"
+status  = "adapted"
+sha256  = "af95ccfc56494ddd915afc87a74711c9f1887c749e1c1aec4b2aa7a4ed1d64d2"
+upstream_sha256 = "411775b37db07d07fb8d545b7400626a3569bcaee4f28bc651e6e7429f99f97b"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
 note    = "Vendored pre-emptively; torch wheels typically link against libcutensor.so."
 
 [[sources.files]]
 from    = "install/install_nccl.sh"
 target  = "cudastack_install_nccl.sh"
-status  = "verbatim"
-sha256  = "7dd52e9b8b48a34f1dea05ba9d70dfa14159eecbde04914bc2763973f5f4e13b"
+status  = "adapted"
+sha256  = "f64aa96ece6fdd727c1837a550485cc5fcd3194e085c8daf4d2405613816500f"
+upstream_sha256 = "7dd52e9b8b48a34f1dea05ba9d70dfa14159eecbde04914bc2763973f5f4e13b"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
 note    = "Vendored pre-emptively; torch wheels are typically built with USE_NCCL=1 and link libnccl.so. Upstream pins NCCL 2.29.7 but that deb doesn't exist in the SBSA/cuda13.0 repo yet (probed Packages.gz 2026-04-13). Downgraded to 2.28.7 via the NCCL_VERSION build arg."
 
 # --- Source 2: torch / torchaudio pip install logic ---

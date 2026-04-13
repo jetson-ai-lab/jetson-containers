@@ -3,9 +3,9 @@ set -eux
 
 echo "Installing NVIDIA NCCL $NCCL_VERSION via network repo"
 
-if [ "$CUDA_ARCH" = "tegra-aarch64" ] && [ "${CUDA_INSTALLED_VERSION}" -lt 132 ]; then
+if [[ "$CUDA_ARCH" == "tegra-aarch64" && "${CUDA_INSTALLED_VERSION}" -lt 132 ]]; then
     REPO_ARCH="arm64"
-elif [ "$(uname -m)" = "aarch64" ]; then
+elif [[ "$(uname -m)" == "aarch64" ]]; then
     REPO_ARCH="sbsa"
 else
     REPO_ARCH="x86_64"

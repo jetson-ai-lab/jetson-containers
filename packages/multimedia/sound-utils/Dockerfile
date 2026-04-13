@@ -76,17 +76,20 @@ ARG TORCH_VERSION=2.10.0
 ARG TORCHAUDIO_VERSION=2.10.0
 RUN uv pip install "torch==${TORCH_VERSION}" "torchaudio==${TORCHAUDIO_VERSION}"
 
-# portaudio dev headers
+# sound-utils' own audio stack: portaudio system headers + python audio libs
+# (one logical install unit — kept in a single RUN per the standard, see
+#  .claude/skills/standards/references/dockerfile.md "RUN layering")
 RUN apt-get update && \
     apt-get install -y portaudio*-dev && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN uv pip install soundfile sounddevice
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    uv pip install soundfile sounddevice
 
 # Build-time sanity: verify torch imports and the installed wheel has CUDA
 # support baked in. We do NOT require live GPU access here — docker build
 # isn't run with --gpus=all, so torch.cuda.is_available() may be False on
 # some builders. The live-GPU check belongs in test.py, which runs under
 # docker run --gpus=all via container.py::test_container.
+# (kept as its own RUN — it's a verification step, not part of any install)
 RUN python3 -c "import torch; \
 assert torch.version.cuda is not None, 'Installed torch wheel does not include CUDA support'; \
 print('torch', torch.__version__, 'built with CUDA', torch.version.cuda, 'cuDNN', torch.backends.cudnn.version()); \

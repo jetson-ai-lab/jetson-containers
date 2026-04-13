@@ -30,11 +30,22 @@ RUN python3 -c "import torch; assert torch.version.cuda is not None"
 
 …and **live-GPU** checks in `test.py` / `test.sh`. `container.py::test_container` runs tests under `docker run --gpus=all`, so that's where a `torch.cuda.is_available()` + tensor-op check belongs.
 
-## Exceptions: verbatim vendored code
+## Vendored / assimilated code (`status: verbatim` vs `adapted`)
 
-If a file in a package directory is a verbatim copy from elsewhere in the repo or from a public upstream, and its SHA256 is pinned in a manifest (`.assimilai.toml`), **do not "fix" lint findings on it**. Modifying verbatim copies breaks the provenance contract the manifest encodes.
+Vendored files (a copy of code from elsewhere in the repo or a public upstream, tracked in a `.assimilai.toml` manifest) have two valid statuses:
 
-Instead: file an upstream issue against the canonical source, reference the Sonar rule + finding count, and push back in review. Concrete example: PR #17 vendored `packages/cuda/cudastack/install/*.sh` into `packages/multimedia/sound-utils/`. The 14 `shelldre:S7688` findings on those copies were tracked as jetson-ai-lab/jetson-containers#19 and the threads were left open (not "fixed" downstream).
+- **`verbatim`** — exact byte-for-byte copy. SHA256 in the manifest matches the upstream's hash. Use only when you literally must not change the file (signed sources, regulatory constraints, an active upstream sync window).
+- **`adapted`** — copy with documented local changes. Manifest carries `sha256` (this repo's copy), `upstream_sha256` (the source's hash at the time of vendor), and a `changes` field describing the diff.
+
+When SonarCloud / Qodo / Copilot flag a finding on a vendored file, **default to fixing it locally and promoting `verbatim` → `adapted`** rather than carrying the noise indefinitely. We control this repo; `verbatim` is a contract about provenance, not a moratorium on improvements. The fix needs to be:
+
+1. Mechanical and well-understood (e.g. `[ → [[`, deleting a stray semicolon). Behavioral changes get a separate review.
+2. Recorded in the manifest's `changes` field with the rule that drove it (e.g. `Sonar shelldre:S7688`).
+3. Tracked upstream too, so the canonical source eventually catches up. File an issue against the upstream package and link it from `changes`.
+
+Concrete example from PR #17: the four `cudastack_install_*.sh` scripts started as `verbatim` copies and tripped 14 `shelldre:S7688` findings. They were promoted to `adapted` with the `[ → [[` change applied locally; the upstream cleanup is tracked at jetson-ai-lab/jetson-containers#19 so the next sync doesn't lose the fix.
+
+Use `verbatim` (and push back on lint findings) only when the bar above can't be met — and even then, the fallback is `sonar.exclusions` in `sonar-project.properties` so the dashboard isn't permanently noisy.
 
 ## Replying to bot flags on intentional patterns
 
@@ -49,6 +60,6 @@ Resolve the thread only when a fix actually landed. Leave it open if you pushed 
 ## What not to do
 
 - Don't silence Sonar / bot warnings by deleting comments or adding `// NOSONAR` blanket suppressions. If a finding doesn't apply, the right answer is a substantive PR reply (above), not suppression.
-- Don't fix lint on verbatim vendored files — see the exception rule above.
+- Don't push back on a Sonar finding in vendored code with "it's verbatim" if the fix is mechanical. Promote to `adapted`, record the `changes`, file the upstream issue. Reserve `verbatim` for cases where local fixes really aren't an option.
 - Don't merge a `RUN` that intentionally encodes provenance (assimilai per-source layer) just to silence `docker:S7031`. Comment the intent; reply on the thread.
 - Don't put live-GPU checks (`torch.cuda.is_available()`, GPU tensor ops) in a Dockerfile `RUN`. Put them in `test.py` / `test.sh`.

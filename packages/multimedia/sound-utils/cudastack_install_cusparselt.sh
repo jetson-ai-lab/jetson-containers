@@ -6,9 +6,9 @@ echo "Detected architecture: ${CUDA_ARCH}"
 CUDA_MAJOR=$(nvcc --version 2>/dev/null | sed -n 's/.*release \([0-9][0-9]*\).*/\1/p')
 : "${CUDA_MAJOR:=${CUDA_VERSION_MAJOR:-13}}"
 
-if [ "$CUDA_ARCH" = "tegra-aarch64" ] && [ "${CUDA_INSTALLED_VERSION}" -lt 132 ]; then
+if [[ "$CUDA_ARCH" == "tegra-aarch64" && "${CUDA_INSTALLED_VERSION}" -lt 132 ]]; then
     REPO_ARCH="arm64"
-elif [ "$(uname -m)" = "aarch64" ]; then
+elif [[ "$(uname -m)" == "aarch64" ]]; then
     REPO_ARCH="sbsa"
 else
     REPO_ARCH="x86_64"
@@ -33,7 +33,7 @@ RT_APT_VER=$(apt-cache madison "${PKG_RT}" 2>/dev/null \
 DEV_APT_VER=$(apt-cache madison "${PKG_DEV}" 2>/dev/null \
     | awk -v ver="${CUSPARSELT_VERSION}" '$3 ~ ver {gsub(/^ +| +$/, "", $3); print $3; exit}')
 
-if [ -n "${RT_APT_VER}" ] && [ -n "${DEV_APT_VER}" ]; then
+if [[ -n "${RT_APT_VER}" && -n "${DEV_APT_VER}" ]]; then
     echo "Pinning cuSPARSELt to: ${PKG_RT}=${RT_APT_VER} ${PKG_DEV}=${DEV_APT_VER}"
     apt-get install -y --no-install-recommends "${PKG_RT}=${RT_APT_VER}" "${PKG_DEV}=${DEV_APT_VER}"
 else

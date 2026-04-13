@@ -6,7 +6,7 @@ echo "Detected architecture: ${CUDA_ARCH}"
 CUDA_MAJOR=$(nvcc --version 2>/dev/null | sed -n 's/.*release \([0-9][0-9]*\).*/\1/p')
 : "${CUDA_MAJOR:=${CUDA_VERSION_MAJOR:-12}}"
 
-if [ "$(uname -m)" = "aarch64" ]; then
+if [[ "$(uname -m)" == "aarch64" ]]; then
     DEB_ARCH="arm64"
 else
     DEB_ARCH="amd64"
