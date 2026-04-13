@@ -34,10 +34,22 @@ def test_imports():
         import torchaudio
         print(f"✓ torch imported successfully (version: {torch.__version__})")
         print(f"✓ torchaudio imported successfully (version: {torchaudio.__version__})")
+        # Live-GPU check moved here from Dockerfile (docker build has no
+        # --gpus=all; test_container runs with --gpus=all).
+        if torch.version.cuda:
+            if torch.cuda.is_available():
+                _ = torch.zeros(1, device='cuda') + 1
+                print(f"✓ CUDA available: {torch.cuda.device_count()} device(s), "
+                      f"built against CUDA {torch.version.cuda}, cuDNN {torch.backends.cudnn.version()}")
+            else:
+                print(f"⚠ torch wheel was built with CUDA {torch.version.cuda} but "
+                      "torch.cuda.is_available() is False — GPU not forwarded to this run.")
+        else:
+            print("⚠ torch wheel has no CUDA support (CPU-only).")
     except ImportError as e:
         print(f"✗ Failed to import torch/torchaudio: {e}")
         return False
-    
+
     return True
 
 

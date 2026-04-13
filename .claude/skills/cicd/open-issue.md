@@ -10,7 +10,7 @@ Repeated `gh issue create` invocations are easy to get wrong (mismatched labels,
 .claude/skills/cicd/scripts/open-issues.sh <manifest.yaml>
 ```
 
-The script reads a YAML manifest, validates each entry, runs `gh issue create`, and prints a summary of issue URLs. It also appends a standard **Environment** footer to each body so the repo's `bug-report.yml` conventions are respected.
+The script reads a YAML manifest, validates each entry, runs `gh issue create`, and prints a summary of issue URLs. If the manifest defines `defaults.environment_footer`, that block is appended to each body — useful for the repo's `bug-report.yml` Environment section. Bodies are passed through unchanged; the script does not rewrite or prepend to them.
 
 ## Manifest format
 
@@ -32,12 +32,22 @@ issues:
     body_file: bodies/02-batch-verify.md
 ```
 
-Each `body_file` is a markdown file. The script prepends a brief header and appends the `environment_footer`. Labels must already exist in the repo (run `gh label list` to see available labels: `bug`, `enhancement`, `documentation`, `question`, etc.).
+Each `body_file` is a markdown file. The script appends the `environment_footer` (if set) but does not modify the body otherwise. Labels must already exist in the repo (run `gh label list` to see available labels: `bug`, `enhancement`, `documentation`, `question`, etc.).
 
 ## When to open issues inline vs via script
 
 - **1 issue** → inline `gh issue create --title ... --body-file ...` is fine.
 - **≥ 3 issues** → use `.claude/skills/cicd/scripts/open-issues.sh`. Writing a manifest once is faster than remembering to set the label on each call, and the summary output is grep-able.
+
+## Related script: pulling PR review feedback
+
+When the next step after opening issues is reviewing PR feedback (Qodo / Copilot / SonarCloud), use the companion helper:
+
+```bash
+.claude/skills/cicd/scripts/pull-pr-review.sh <pr-number> [--repo owner/repo] [--json]
+```
+
+It gathers status checks, review comments (with path:line), bot comments, unresolved review-thread IDs (so you can post replies and mark resolved via `gh api graphql`), and SonarCloud issues — all in one shot. Pass `--json` for machine-readable output.
 
 ## Repo conventions (from `.github/ISSUE_TEMPLATE/`)
 

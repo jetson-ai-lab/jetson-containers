@@ -14,5 +14,5 @@ cd hello
 cargo build --quiet --release
 out=$(./target/release/hello)
 echo "$out"
-[ "$out" = "Hello, world!" ]
+[[ "$out" == "Hello, world!" ]]
 echo "OK"

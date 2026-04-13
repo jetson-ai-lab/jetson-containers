@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Bulk-open GitHub issues from a YAML manifest.
 #
-# Usage: scripts/open_issues.sh <manifest.yaml>
+# Usage: .claude/skills/cicd/scripts/open-issues.sh <manifest.yaml>
 # Requires: gh (authenticated), python3 with PyYAML.
 #
-# Manifest format (see .claude/skills/open-issue.md):
+# Manifest format (see .claude/skills/cicd/open-issue.md):
 #   defaults:
 #     repo: owner/repo
 #     environment_footer: |
@@ -64,11 +64,11 @@ for i, it in enumerate(issues, 1):
 PY
 )
 
-repo=$(grep -m1 '^REPO\b' <<<"$parsed" | cut -f2-)
-footer_b64=$(grep -m1 '^FOOTER\b' <<<"$parsed" | cut -f2-)
+repo=$(grep -m1 $'^REPO\t' <<<"$parsed" | cut -f2-)
+footer_b64=$(grep -m1 $'^FOOTER\t' <<<"$parsed" | cut -f2-)
 footer=$(printf '%s' "$footer_b64" | base64 -d)
 
-mapfile -t rows < <(grep '^ISSUE\b' <<<"$parsed")
+mapfile -t rows < <(grep $'^ISSUE\t' <<<"$parsed")
 count=${#rows[@]}
 
 echo "opening $count issue(s) on $repo..."

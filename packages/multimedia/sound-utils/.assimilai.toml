@@ -1,14 +1,27 @@
 # Assimilai manifest — https://assimilai.dev
-# "Copy, don't import" — we vendored the minimum bits from two upstream packages
-# in this repo so sound-utils can skip the full cudastack graph (which is broken
-# because it hardcodes cuDNN 9.21.0, a deb NVIDIA had not published as of 2026-04-13).
-# sound-utils only needs cuDNN (not TensorRT / NCCL / cuDSS / cuSPARSELt / cuTENSOR /
-# NVPL / NVSHMEM / CUTLASS / GDRCopy), so the other 9 cudastack components are skipped.
+# "Copy, don't import" — we vendored the minimum bits from upstream cudastack
+# install logic + pytorch install so sound-utils can avoid the full cudastack
+# graph (which is broken on SBSA because it hardcodes cuDNN 9.21.0, a deb NVIDIA
+# had not published as of 2026-04-13).
+#
+# What we actually vendor/install here:
+#   - cuDNN (adapted: pinned 9.20.0 instead of upstream's unpublished 9.21.0)
+#   - NVPL (adapted: ubuntu2404 arm64 apt path, matches upstream)
+#   - cuDSS, cuSPARSELt, cuTENSOR (verbatim copies of cudastack install scripts)
+#   - NCCL (verbatim script, pin dropped to 2.28.7 via NCCL_VERSION build arg)
+#   - torch + torchaudio (pip install, dissolved from ml/pytorch install.sh)
+#
+# What we skip from the full cudastack graph:
+#   TensorRT, NVSHMEM, GDRCopy, CUTLASS — not needed by sound-utils test.py.
+#
+# The vendored install scripts live in this directory (cudastack_install_*.sh);
+# the manifest's [[sources.files]] records their SHA256 so a future drift
+# checker can diff against packages/cuda/cudastack/install/ HEAD.
 
 [package]
 name = "sound-utils"
 assimilated = "2026-04-13"
-reason = "cudastack:standard stage 5/18 fails on cuDNN 9.21.0 404; sound-utils only needs cuDNN."
+reason = "cudastack:standard stage 5/18 fails on cuDNN 9.21.0 404; this package vendors the minimum cudastack + pytorch install logic it actually uses, pinned to working versions."
 
 # --- Source 1: cuDNN install logic ---
 [[sources]]
