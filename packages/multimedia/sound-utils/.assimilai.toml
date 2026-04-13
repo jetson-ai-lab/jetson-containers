@@ -1,0 +1,97 @@
+# Assimilai manifest — https://assimilai.dev
+# "Copy, don't import" — we vendored the minimum bits from upstream cudastack
+# install logic + pytorch install so sound-utils can avoid the full cudastack
+# graph (which is broken on SBSA because it hardcodes cuDNN 9.21.0, a deb NVIDIA
+# had not published as of 2026-04-13).
+#
+# What we actually vendor/install here:
+#   - cuDNN (adapted: pinned 9.20.0 instead of upstream's unpublished 9.21.0)
+#   - NVPL (adapted: ubuntu2404 arm64 apt path, matches upstream)
+#   - cuDSS, cuSPARSELt, cuTENSOR (verbatim copies of cudastack install scripts)
+#   - NCCL (verbatim script, pin dropped to 2.28.7 via NCCL_VERSION build arg)
+#   - torch + torchaudio (pip install, dissolved from ml/pytorch install.sh)
+#
+# What we skip from the full cudastack graph:
+#   TensorRT, NVSHMEM, GDRCopy, CUTLASS — not needed by sound-utils test.py.
+#
+# The vendored install scripts live in this directory (cudastack_install_*.sh);
+# the manifest's [[sources.files]] records their SHA256 so a future drift
+# checker can diff against packages/cuda/cudastack/install/ HEAD.
+
+[package]
+name = "sound-utils"
+assimilated = "2026-04-13"
+reason = "cudastack:standard stage 5/18 fails on cuDNN 9.21.0 404; this package vendors the minimum cudastack + pytorch install logic it actually uses, pinned to working versions."
+
+# --- Source 1: cuDNN install logic ---
+[[sources]]
+path    = "packages/cuda/cudastack"
+version = "HEAD @ 2026-04-13"
+
+[[sources.files]]
+from    = "install/install_cudnn.sh"
+target  = "Dockerfile"
+status  = "adapted"
+changes = "pinned CUDNN_VERSION=9.20.0 (upstream pins 9.21.0, which 404s); dropped libcudnn9-samples from CUDNN_PACKAGES (unused)."
+
+[[sources.files]]
+from    = "install/install_nvpl.sh"
+target  = "Dockerfile"
+status  = "adapted"
+changes = "pinned NVPL_VERSION=25.11 (matches upstream); dropped the CUDA_ARCH conditional since this Dockerfile is SBSA-only."
+note    = "Required because torch's aarch64 wheels link against libnvpl_lapack_lp64_gomp.so.0 at import time. Discovered in build #2 via ImportError."
+
+[[sources.files]]
+from    = "install/install_cudss.sh"
+target  = "cudastack_install_cudss.sh"
+status  = "adapted"
+sha256  = "b447924af3cfea4907230c2a9fe6f4bdc1b8f5eab727e85295b6cb5e47612e03"
+upstream_sha256 = "5d5f822164e322b617aa1146b77d21721db55e1f61fc2d7eb78327c773e4ffdd"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
+note    = "Required because torch's aarch64 wheels link against libcudss.so.0. Discovered in build #3 via ImportError."
+
+[[sources.files]]
+from    = "install/install_cusparselt.sh"
+target  = "cudastack_install_cusparselt.sh"
+status  = "adapted"
+sha256  = "6aa09ab9973e4f9f7a4c1ea14c8c243c708095a905864f127b08b6387ed7d1de"
+upstream_sha256 = "4d9de6e67cf694d29f18b2b10bbb3814aa1fe4b0529cb7dedcf57e266df99bcd"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
+note    = "Vendored pre-emptively; torch wheels typically link against libcusparseLt.so as well."
+
+[[sources.files]]
+from    = "install/install_cutensor.sh"
+target  = "cudastack_install_cutensor.sh"
+status  = "adapted"
+sha256  = "af95ccfc56494ddd915afc87a74711c9f1887c749e1c1aec4b2aa7a4ed1d64d2"
+upstream_sha256 = "411775b37db07d07fb8d545b7400626a3569bcaee4f28bc651e6e7429f99f97b"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
+note    = "Vendored pre-emptively; torch wheels typically link against libcutensor.so."
+
+[[sources.files]]
+from    = "install/install_nccl.sh"
+target  = "cudastack_install_nccl.sh"
+status  = "adapted"
+sha256  = "f64aa96ece6fdd727c1837a550485cc5fcd3194e085c8daf4d2405613816500f"
+upstream_sha256 = "7dd52e9b8b48a34f1dea05ba9d70dfa14159eecbde04914bc2763973f5f4e13b"
+changes = "ported [ ... ] tests to [[ ... ]] (Sonar shelldre:S7688). No behavior change. Upstream cleanup tracked in jetson-ai-lab/jetson-containers#19."
+note    = "Vendored pre-emptively; torch wheels are typically built with USE_NCCL=1 and link libnccl.so. Upstream pins NCCL 2.29.7 but that deb doesn't exist in the SBSA/cuda13.0 repo yet (probed Packages.gz 2026-04-13). Downgraded to 2.28.7 via the NCCL_VERSION build arg."
+
+# --- Source 2: torch / torchaudio pip install logic ---
+[[sources]]
+path    = "packages/ml/pytorch"
+version = "HEAD @ 2026-04-13"
+
+[[sources.files]]
+from    = "install.sh"
+target  = "Dockerfile"
+status  = "dissolved"
+into    = "RUN uv pip install torch torchaudio"
+note    = "lines 53-60 of install.sh; torch 2.10.0 and torchaudio 2.10.0 wheels for cp312 linux_aarch64 verified present at https://pypi.jetson-ai-lab.io/sbsa/cu130/+simple/."
+
+[[sources.files]]
+from    = "torchaudio/install.sh"
+target  = "Dockerfile"
+status  = "dissolved"
+into    = "RUN uv pip install torch torchaudio"
+note    = "torchaudio >=2.9 delegates .save() to torchcodec, which needs FFmpeg >=7. Ubuntu 24.04 noble ships FFmpeg 6 only, and the jetson-ai-lab mirror only has torchcodec wheels with libtorchcodec_core7.so (FFmpeg 7 ABI). Rather than pull in an out-of-distro FFmpeg 7 backport, test.py was patched to soft-skip the torchaudio.save sub-test (soundfile.write covers the same use case)."
