@@ -20,10 +20,10 @@ tells you which branch to use and in what order.
 
 Confirm the prerequisites are done before running any workflow:
 
-1. **Four pending publishers registered** — table in `docs/releasing-pypi.md`. If Ori hasn't done this, he hits "Trusted publishing exchange failure" on the first run.
+1. **Four pending publishers registered** — table in `docs/releasing-pypi.md`. If the repo admin hasn't done this, the workflow fails with "Trusted publishing exchange failure" on the first run.
 2. **Two GitHub Environments exist** — `testpypi` and `pypi` under repo Settings → Environments. No secrets inside.
 
-If either is missing, STOP and tell Ori what to configure. Don't attempt to run the workflow.
+If either is missing, STOP and tell the user (or maintainer) what to configure. Don't attempt to run the workflow.
 
 ## Release to Test-PyPI (always do this first for a new version)
 
@@ -91,4 +91,4 @@ GitHub Actions — not in the PyPI package.
 
 ## Follow-ups
 
-Track in GitHub Issues on `jetson-ai-lab/jetson-containers`. If Issues are disabled, flag that to Ori and ask to enable them — do NOT park follow-ups in PR comments or an in-repo `FOLLOWUPS.md`.
+Track in GitHub Issues on `jetson-ai-lab/jetson-containers`. If Issues are disabled, flag that to the maintainer and ask them to enable — do NOT park follow-ups in PR comments or an in-repo `FOLLOWUPS.md`.

@@ -79,9 +79,11 @@ The tag push fires `publish.yml` → builds both distributions with name-rewrite
 
 ## Version bumping
 
-Single source of truth: the `version = "X.Y.Z"` line in `pyproject.toml`.
-`jetson_cli/__init__.py` hardcodes the same string so `pytest tests/` runs
-without a mandatory editable install — keep both in sync.
+Canonical version: the `version = "X.Y.Z"` line in `pyproject.toml`.
+`jetson_cli/__init__.py` currently hardcodes the same string so `pytest tests/`
+runs without a mandatory editable install, so the repository has a **dual-source
+setup** and both files must be kept in sync until we migrate to
+`importlib.metadata`-based resolution.
 
 ```bash
 # Bump both in one commit:
@@ -110,7 +112,9 @@ don't cross-contaminate.
 
 **Bad wheel uploaded.** PyPI versions are immutable — you cannot re-upload
 `0.1.0`. Yank it from the PyPI project page (it stays resolvable by exact pin
-but drops out of `pip install <name>` resolution), then tag and push `0.1.1`.
+but drops out of `pip install <name>` resolution), then tag and push `v0.1.1`
+(the workflow triggers on `v*` tags, so the tag name must include the `v`
+prefix).
 
 **OIDC exchange failed.** `pypa/gh-action-pypi-publish` errors with "Trusted
 publishing exchange failure" and uploads nothing. Fix the pending-publisher

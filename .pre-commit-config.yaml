@@ -20,12 +20,16 @@ repos:
     hooks:
     -   id: flake8
         additional_dependencies: [flake8-docstrings]
-        # Use the same file patterns as black
+        # Flake8 scope is narrower than Black/whitespace on purpose:
+        # - jetson_cli/ is new code we want linted.
+        # - Only tests/test_cli.py is covered (excludes the pre-existing
+        #   tests/verify_triton_config.py which wasn't written for
+        #   flake8-docstrings).
         files: |
             (?x)^(
                 jetson_containers/.*\.py|
                 jetson_cli/.*\.py|
-                tests/.*\.py|
+                tests/test_cli\.py|
                 packages/example/.*\.py|
                 test_precommit\.py
             )$

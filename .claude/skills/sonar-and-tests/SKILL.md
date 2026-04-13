@@ -18,26 +18,27 @@ job running it. Adapted from `~/git/culture`'s CI patterns.
 
 ## Two deliverables
 
-This skill produces two files. Create both in one PR.
+This skill produces two repo changes. Make both in one PR.
 
-### 1. `sonar-project.properties` (repo root)
+### 1. Update the existing `sonar-project.properties` at the repo root
+
+The file already exists. Preserve unrelated entries; only merge the keys
+below. Expected end state (diff against current content — new lines starred):
 
 ```properties
 sonar.projectKey=jetson-ai-lab_jetson-containers
 sonar.organization=jetson-ai-lab
-
-sonar.sources=jetson_cli
-sonar.tests=tests
-sonar.python.coverage.reportPaths=coverage.xml
-sonar.python.version=3.8,3.9,3.10,3.11,3.12
-
-# Exclude the container-build packages — they mirror upstream style and are
-# deliberately not linted (see CLAUDE.md "Pre-commit scope").
-sonar.exclusions=packages/**,docs/**,data/**,_site*/**,**/__pycache__/**
-
-# Block PR merge until the quality gate passes
-sonar.qualitygate.wait=true
+sonar.sources=jetson_containers,jetson_cli,packages,scripts   # *** add jetson_cli
+sonar.tests=tests,test_suite
+sonar.python.version=3.10,3.11,3.12
+sonar.python.coverage.reportPaths=coverage.xml                # *** add
+sonar.exclusions=**/Dockerfile*,**/*.patch,logs/**,data/**,deprecated/**,venv/**,**/__pycache__/**,docs/**,.github/**
+sonar.sourceEncoding=UTF-8
+sonar.qualitygate.wait=true                                   # *** add (optional — blocks PR merge until gate passes)
 ```
+
+Do NOT replace the file. Do NOT invent new exclusions (the existing set is
+tuned for this repo). Only add the three keys above.
 
 ### 2. New job block appended to `.github/workflows/pr-on-dev.yml`
 
@@ -113,8 +114,10 @@ gh pr checks <pr-number>   # pytest job should be green
 
 This skill adds a CI-only quality job. It does NOT touch the build-matrix
 workflows (`pr-on-dev.yml`'s self-hosted `build` job, `sweep-build-matrix.yml`,
-etc.) — those remain for the container packages, which are intentionally
-excluded from SonarCloud scope via `sonar.exclusions`.
+etc.) — those remain for the container packages. The existing
+`sonar-project.properties` already scopes SonarCloud to the Python code via
+`sonar.sources` / `sonar.exclusions`; this skill just extends `sources` to
+include `jetson_cli`.
 
 ## Follow-ups
 
