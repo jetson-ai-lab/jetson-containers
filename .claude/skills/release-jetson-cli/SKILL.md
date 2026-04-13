@@ -69,7 +69,12 @@ step. Verify at `https://pypi.org/project/jetson-cli/`.
 ### Manual fallback
 
 ```bash
+# Test-PyPI
 gh workflow run publish.yml -f target=testpypi --ref <branch>
+gh run watch $(gh run list --workflow=publish.yml --limit=1 --json databaseId -q '.[0].databaseId')
+
+# PyPI (publishes as <base>.dev<N> — dispatch never produces a stable wheel)
+gh workflow run publish.yml -f target=pypi --ref <branch>
 gh run watch $(gh run list --workflow=publish.yml --limit=1 --json databaseId -q '.[0].databaseId')
 ```
 

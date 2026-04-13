@@ -38,6 +38,7 @@ jobs:
       - name: Compute release version
         id: version
         env:
+          EVENT_NAME: ${{ github.event_name }}
           REF: ${{ github.ref }}
           RUN_NUMBER: ${{ github.run_number }}
         run: |
@@ -46,12 +47,16 @@ jobs:
           import pathlib
           import re
 
+          event = os.environ["EVENT_NAME"]
           ref = os.environ["REF"]
           run_num = os.environ["RUN_NUMBER"]
           pyproject = pathlib.Path("pyproject.toml")
           text = pyproject.read_text()
           base = re.search(r'(?m)^version = "([^"]+)"', text).group(1)
-          if ref == "refs/heads/master":
+          # Stable only on actual push to master. workflow_dispatch always
+          # gets a .devN suffix so a manual run on master cannot accidentally
+          # publish a stable wheel.
+          if event == "push" and ref == "refs/heads/master":
               version = base
           else:
               version = f"{base}.dev{run_num}"
