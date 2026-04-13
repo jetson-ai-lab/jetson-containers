@@ -1,0 +1,5 @@
+[flake8]
+# Relax docstring rules for smoke tests — function docstrings add noise
+# without catching bugs. Assertion names carry the intent.
+per-file-ignores =
+    tests/test_cli.py:D100,D101,D102,D103,D104
