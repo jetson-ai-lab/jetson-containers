@@ -9,6 +9,8 @@ repos:
         files: |
             (?x)^(
                 jetson_containers/.*\.py|    # Core package files
+                jetson_cli/.*\.py|           # PyPI CLI package
+                tests/.*\.py|                # Tests for jetson_cli
                 packages/example/.*\.py|     # Example of how to add a package
                 test_precommit\.py           # Our test file
             )$
@@ -22,6 +24,8 @@ repos:
         files: |
             (?x)^(
                 jetson_containers/.*\.py|
+                jetson_cli/.*\.py|
+                tests/.*\.py|
                 packages/example/.*\.py|
                 test_precommit\.py
             )$
@@ -33,6 +37,8 @@ repos:
         files: |
             (?x)^(
                 jetson_containers/.*|
+                jetson_cli/.*|
+                tests/.*|
                 packages/example/.*|
                 test_precommit\.py
             )$
@@ -40,6 +46,8 @@ repos:
         files: |
             (?x)^(
                 jetson_containers/.*|
+                jetson_cli/.*|
+                tests/.*|
                 packages/example/.*|
                 test_precommit\.py
             )$

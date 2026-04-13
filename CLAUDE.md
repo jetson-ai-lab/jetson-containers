@@ -70,13 +70,25 @@ Key metadata fields: `name`, `alias`, `depends`, `requires` (version constraints
 
 Version definitions live in one of: `version.py` (canonical constant, e.g. `PYTORCH_VERSION = Version('2.8')`), a list of calls in `config.py` (add a new entry, **don't remove old ones** — historical versions support older JetPack targets), or `build_args` / Dockerfile `ARG`. After bumping, grep the package directory for the old version string to catch cascading refs in wheel URLs, download filenames, and `requires` constraints.
 
+## PyPI distributions (`jetson_cli/`)
+
+The repo also publishes two PyPI distributions from the `jetson_cli/` top-level package:
+
+- **`jetson-cli`** and **`jetson-containers`** — both ship the `jetson` console command. Identical code; matrix build in `.github/workflows/publish.yml` rewrites `name` + `readme` per distribution.
+- **Scope (important):** the `jetson` CLI is for **Jetson device + package usage** (inspection, probes, container run), **not** meta-tooling for this repo. Do not add `jetson build` / `jetson release` / `jetson doctor` subcommands — repo-facing automation belongs in skills, scripts, or GitHub Actions.
+- **Version:** single source in `pyproject.toml`. `jetson_cli/__init__.py` mirrors it until a future release swaps in `importlib.metadata`.
+- **Release flow:** see `docs/releasing-pypi.md`. Tag `v*` from `master` → workflow auto-publishes to PyPI via OIDC trusted publishing. Test-PyPI is `workflow_dispatch`-only.
+- **Prerequisites (one-time):** four pending publishers on test.pypi.org + pypi.org, and two GitHub Environments (`testpypi`, `pypi`) — all documented in `docs/releasing-pypi.md`.
+
 ## Project-specific skills
 
-Four workflow skills live in `.claude/skills/`:
+Workflow skills live in `.claude/skills/`:
 
 - **`jetson-pr.md`** — full PR workflow (branch naming, PR template, `dev` targeting).
 - **`upgrade-package.md`** — version-bump workflow (where versions are defined, what to preserve).
 - **`new-package.md`** — step-by-step guide for scaffolding a new package (Dockerfile header, `config.py`, test file).
 - **`triage-build-failure.md`** — how to diagnose and fix a failing `jetson-containers build` run (log reading, dependency tracing, layer cache busting).
+- **`release-jetson-cli/`** — publish the `jetson-cli` / `jetson-containers` PyPI distributions (prerequisites, tag flow, verification).
+- **`sonar-and-tests/`** — wire SonarCloud locally + add the pytest+coverage job to `pr-on-dev.yml`.
 
-Reach for these when the user asks to open a PR, upgrade a package, add a new package, or debug a build failure.
+Reach for these when the user asks to open a PR, upgrade a package, add a new package, debug a build failure, cut a PyPI release, or set up local quality checks.
