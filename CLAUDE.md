@@ -85,6 +85,7 @@ The repo also publishes two PyPI distributions from the `jetson_cli/` top-level 
 Workflow skills live in `.claude/skills/`:
 
 - **`jetson-pr.md`** — full PR workflow (branch naming, PR template, `dev` targeting).
+- **`pr-review/`** — after a PR is open, wait for Qodo + Copilot + SonarCloud, then triage every thread (fix / pushback / defer) and file follow-up issues on `jetson-ai-lab/jetson-containers`.
 - **`upgrade-package.md`** — version-bump workflow (where versions are defined, what to preserve).
 - **`new-package.md`** — step-by-step guide for scaffolding a new package (Dockerfile header, `config.py`, test file).
 - **`triage-build-failure.md`** — how to diagnose and fix a failing `jetson-containers build` run (log reading, dependency tracing, layer cache busting).
