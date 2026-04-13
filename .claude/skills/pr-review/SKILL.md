@@ -15,26 +15,34 @@ SonarCloud from "PR open" → "every thread resolved, every deferral in Issues".
 - User just pushed changes and wants the bot feedback triaged end-to-end.
 - Existing PR has unresolved Qodo/Copilot/Sonar threads the user wants cleaned up.
 
-## Prerequisites (fail loud if missing)
+## Prerequisites
+
+**Required:**
 
 - `gh auth status` — GitHub CLI authenticated with `repo` scope (needed for the
-  `resolveReviewThread` GraphQL mutation).
-- `SONAR_TOKEN` env var — see `.claude/skills/sonar-and-tests/SKILL.md` for how
-  it's provisioned; project key is `jetson-ai-lab_jetson-containers`.
-- Working tree: either clean (PR already open) or with the changes the user wants
-  shipped. Do not auto-stash.
+  `resolveReviewThread` GraphQL mutation). If missing, stop and tell the user.
 
-If anything is missing, stop and tell the user — do not silently skip a bot.
+**Optional (degrades gracefully):**
+
+- `SONAR_TOKEN` env var — only needed to query SonarCloud's API directly or to
+  transition Sonar issues (`do_transition`). If unset, fall back to reading
+  `sonarqubecloud[bot]`'s PR summary comment + the `SonarCloud Code Analysis`
+  status check; skip the API-only steps and say so in the final report.
+  See `.claude/skills/sonar-and-tests/SKILL.md`; project key is
+  `jetson-ai-lab_jetson-containers`.
+
+**Working tree:** either clean (PR already open) or holding the changes the user
+wants shipped. Do not auto-stash.
 
 ## Bot account reference
 
-Filter comments by these exact logins:
+Filter comments by these exact logins (verified on this repo):
 
 | Bot | Login | Where comments live |
 |---|---|---|
-| Qodo Merge | `qodo-merge-pro[bot]` or `CodiumAI-Agent` | issue comments + review comments |
-| Copilot PR review | `copilot-pull-request-reviewer[bot]` | review comments |
-| SonarCloud | `sonarcloud[bot]` | status check + SonarCloud API |
+| Qodo Merge | `qodo-code-review[bot]` (historically also `qodo-merge-pro[bot]` / `CodiumAI-Agent`) | issue comments **and** inline review comments |
+| Copilot PR review | `copilot-pull-request-reviewer[bot]` (author field may appear as `Copilot`) | review comments + review-summary body |
+| SonarCloud | `sonarqubecloud[bot]` (historically `sonarcloud[bot]`) | status check + single PR summary comment |
 
 ## Phase 1 — branch + PR (skip if a PR for this branch already exists)
 
@@ -70,23 +78,34 @@ Then check each bot. Re-check every ~2 min up to a 10-minute ceiling:
 ```bash
 REPO=jetson-ai-lab/jetson-containers
 
-# Qodo (both logins — bot was renamed in the past)
+# Shared login filter — covers historical renames
+QODO='.user.login=="qodo-code-review[bot]" or .user.login=="qodo-merge-pro[bot]" or .user.login=="CodiumAI-Agent"'
+COPILOT='.user.login=="copilot-pull-request-reviewer[bot]" or .user.login=="Copilot"'
+SONAR='.user.login=="sonarqubecloud[bot]" or .user.login=="sonarcloud[bot]"'
+
+# Qodo — posts BOTH issue-level and inline review comments
 gh api "repos/$REPO/issues/$PR/comments" \
-  --jq '.[] | select(.user.login=="qodo-merge-pro[bot]" or .user.login=="CodiumAI-Agent") | {id, body: .body[0:200]}'
-
-# Copilot review comments
-gh api "repos/$REPO/pulls/$PR/reviews" \
-  --jq '.[] | select(.user.login=="copilot-pull-request-reviewer[bot]") | {id, state, submitted_at}'
+  --jq ".[] | select($QODO) | {id, body: .body[0:200]}"
 gh api "repos/$REPO/pulls/$PR/comments" \
-  --jq '.[] | select(.user.login=="copilot-pull-request-reviewer[bot]") | {id, path, line, body: .body[0:200]}'
+  --jq ".[] | select($QODO) | {id, path, line, body: .body[0:200]}"
 
-# SonarCloud — check the status check first
+# Copilot — summary review body + inline review comments
+gh api "repos/$REPO/pulls/$PR/reviews" \
+  --jq ".[] | select($COPILOT) | {id, state, submitted_at}"
+gh api "repos/$REPO/pulls/$PR/comments" \
+  --jq ".[] | select($COPILOT) | {id, path, line, body: .body[0:200]}"
+
+# SonarCloud — status check + single summary issue comment
 gh pr checks $PR | grep -i sonar
+gh api "repos/$REPO/issues/$PR/comments" \
+  --jq ".[] | select($SONAR) | {id, body: .body[0:500]}"
 
-# SonarCloud findings (requires SONAR_TOKEN)
-curl -s -u "$SONAR_TOKEN:" \
-  "https://sonarcloud.io/api/issues/search?componentKeys=jetson-ai-lab_jetson-containers&pullRequest=$PR&resolved=false" \
-  | jq '.issues[] | {key, severity, component, line, message}'
+# SonarCloud API — only if SONAR_TOKEN is set (otherwise the bot comment above is enough)
+if [ -n "$SONAR_TOKEN" ]; then
+  curl -s -u "$SONAR_TOKEN:" \
+    "https://sonarcloud.io/api/issues/search?componentKeys=jetson-ai-lab_jetson-containers&pullRequest=$PR&resolved=false" \
+    | jq '.issues[] | {key, severity, component, line, message}'
+fi
 ```
 
 Move on once the 5-minute floor passed AND at least one signal per bot has
@@ -116,50 +135,91 @@ Do not call `ExitPlanMode` until every finding is assigned a bucket.
   `addresses qodo #<id>, sonar python:S5754`.
 - `git push`
 
-## Phase 5 — reply and resolve every thread
+## Phase 5 — reply and resolve
 
-Get every review thread and its id:
+**What can be "resolved" vs just "replied":**
+
+- **Review threads** (inline code comments on a PR) — have a `thread_id` and
+  are resolvable via the `resolveReviewThread` GraphQL mutation.
+- **Issue comments** (top-level PR conversation: Qodo summary, Copilot summary,
+  SonarCloud summary comment) — are **not** resolvable. Reply with a new issue
+  comment to close the loop; they collapse naturally once acknowledged.
+
+**Scope of resolution:** only auto-reply/resolve threads whose root comment
+author is in the bot-login table above. If a thread is authored by a human
+reviewer, stop and ask the user — do not auto-resolve human feedback.
+
+### Fetch every review thread (paginated)
 
 ```bash
-gh api graphql -f query='
-  query($owner:String!,$repo:String!,$pr:Int!){
-    repository(owner:$owner,name:$repo){
-      pullRequest(number:$pr){
-        reviewThreads(first:100){
-          nodes{
-            id
-            isResolved
-            comments(first:1){
-              nodes{ databaseId author{login} path body }
+cursor=
+all_threads='[]'
+while :; do
+  args=(-F owner=jetson-ai-lab -F repo=jetson-containers -F pr="$PR")
+  [ -n "$cursor" ] && args+=(-F cursor="$cursor")
+
+  resp=$(gh api graphql -f query='
+    query($owner:String!,$repo:String!,$pr:Int!,$cursor:String){
+      repository(owner:$owner,name:$repo){
+        pullRequest(number:$pr){
+          reviewThreads(first:100, after:$cursor){
+            pageInfo{ hasNextPage endCursor }
+            nodes{
+              id
+              isResolved
+              comments(first:1){
+                nodes{ databaseId author{login} path body }
+              }
             }
           }
         }
       }
-    }
-  }' -F owner=jetson-ai-lab -F repo=jetson-containers -F pr=$PR
+    }' "${args[@]}")
+
+  all_threads=$(jq -s '.[0] + .[1]' \
+    <(printf '%s' "$all_threads") \
+    <(printf '%s' "$resp" | jq '.data.repository.pullRequest.reviewThreads.nodes'))
+
+  [ "$(printf '%s' "$resp" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')" = "true" ] || break
+  cursor=$(printf '%s' "$resp" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+done
+
+# Keep only bot-authored, unresolved threads
+BOT_RE='^(qodo-code-review\[bot\]|qodo-merge-pro\[bot\]|CodiumAI-Agent|copilot-pull-request-reviewer\[bot\]|Copilot|sonarqubecloud\[bot\]|sonarcloud\[bot\])$'
+printf '%s' "$all_threads" \
+  | jq --arg re "$BOT_RE" '
+      map(select(.isResolved == false
+                 and (.comments.nodes[0].author.login | test($re))))'
 ```
 
-Reply, then resolve:
+### Reply, then resolve
 
 ```bash
-# Inline review comment reply
+# Inline review comment reply — path is PR-scoped per GitHub REST docs:
+# POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies
 gh api "repos/$REPO/pulls/$PR/comments/<comment_databaseId>/replies" \
   -f body='Fixed in <sha>. <1-line explanation>'
 
-# OR top-level PR comment
-gh pr comment $PR -b '<bot> pushback: <reason>'
+# Top-level PR issue-comment reply (Qodo/Copilot/Sonar summary comments)
+gh pr comment $PR -b '<bot> summary: fixed <N>, pushed back <N>, deferred <N>. <links>'
 
-# Resolve the thread
+# Resolve the review thread (inline only — not for issue comments)
 gh api graphql -f query='
   mutation($id:ID!){
     resolveReviewThread(input:{threadId:$id}){ thread{ id isResolved } }
   }' -f id=<thread_id>
 ```
 
-For SonarCloud findings without a PR-thread (project-level issues), reply in a
-single summary PR comment listing issue keys + dispositions, and mark the Sonar
-issue resolved via `POST /api/issues/do_transition` (transition=`wontfix` for
-pushback, `resolve` for fix) using `SONAR_TOKEN`.
+### SonarCloud specifics
+
+SonarCloud findings do not live on review threads. Two cases:
+
+- **Quality Gate passed, 0 new issues** — nothing to resolve; note in final report.
+- **Findings present** — reply with a single top-level PR comment listing issue
+  keys + disposition (fixed/pushback/defer). If `SONAR_TOKEN` is set, also
+  `POST /api/issues/do_transition` (transition=`wontfix` for pushback,
+  `resolve` for fix). Without `SONAR_TOKEN`, leave the Sonar-side state alone
+  and rely on the next scan (after the fix commit) to clear the issue.
 
 ## Phase 6 — follow-up issues for deferred items
 
@@ -192,13 +252,13 @@ or a markdown file in the repo.
 After the skill completes:
 
 ```bash
-# Every review thread resolved?
-gh api graphql -f query='
-  { repository(owner:"jetson-ai-lab",name:"jetson-containers"){
-      pullRequest(number:'"$PR"'){
-        reviewThreads(first:100){ nodes{ isResolved } } } } }' \
-  | jq '.data.repository.pullRequest.reviewThreads.nodes | map(.isResolved) | all'
-# -> true
+# Every bot-authored review thread resolved? (reuses the paginated fetch + BOT_RE
+# filter from Phase 5 — then assert all remaining unresolved threads are human)
+printf '%s' "$all_threads" \
+  | jq --arg re "$BOT_RE" '
+      [ .[] | select(.comments.nodes[0].author.login | test($re)) | .isResolved ]
+      | all'
+# -> true  (any remaining unresolved threads belong to human reviewers and are out of scope)
 
 # Deferred items filed?
 gh issue list --repo jetson-ai-lab/jetson-containers \
