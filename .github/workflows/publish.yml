@@ -11,9 +11,9 @@ on:
         options:
           - testpypi
           - pypi
+  pull_request:
   push:
-    tags:
-      - "v*"
+    branches: [dev, master]
 
 jobs:
   build:
@@ -34,6 +34,48 @@ jobs:
 
       - name: Install build tooling
         run: python -m pip install --upgrade build twine
+
+      - name: Compute release version
+        id: version
+        env:
+          REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          ref = os.environ["REF"]
+          run_num = os.environ["RUN_NUMBER"]
+          pyproject = pathlib.Path("pyproject.toml")
+          text = pyproject.read_text()
+          base = re.search(r'(?m)^version = "([^"]+)"', text).group(1)
+          if ref == "refs/heads/master":
+              version = base
+          else:
+              version = f"{base}.dev{run_num}"
+          print(f"base={base} ref={ref} -> {version}")
+          pyproject.write_text(
+              re.sub(
+                  r'(?m)^version = ".*"',
+                  f'version = "{version}"',
+                  text,
+                  count=1,
+              )
+          )
+          init = pathlib.Path("jetson_cli/__init__.py")
+          init.write_text(
+              re.sub(
+                  r'(?m)^__version__ = ".*"',
+                  f'__version__ = "{version}"',
+                  init.read_text(),
+                  count=1,
+              )
+          )
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"version={version}\n")
+          PY
 
       - name: Rewrite pyproject name + readme for ${{ matrix.pkg }}
         env:
@@ -71,7 +113,10 @@ jobs:
 
   publish-testpypi:
     name: Publish ${{ matrix.pkg }} to Test-PyPI
-    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    if: >
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi')
     needs: build
     runs-on: ubuntu-latest
     environment: testpypi
@@ -95,7 +140,8 @@ jobs:
   publish-pypi:
     name: Publish ${{ matrix.pkg }} to PyPI
     if: >
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/master')) ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
     needs: build
     runs-on: ubuntu-latest
