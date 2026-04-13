@@ -3,6 +3,7 @@ import concurrent.futures
 import copy
 import fnmatch
 import importlib
+import importlib.abc
 import importlib.machinery
 import importlib.util
 import json

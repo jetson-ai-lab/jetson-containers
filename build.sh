@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # launcher for jetson_containers/build.py (see docs/build.md)
+set -o pipefail
 ROOT="$(dirname "$(readlink -f "$0")")"
 VENV="$ROOT/venv"
 
