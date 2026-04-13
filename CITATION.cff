@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 title: >-
-  Jetson Containers(Machine Learning Containers for Jetson and JetPack)
+  Jetson Containers (Machine Learning Containers for Jetson and JetPack)
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -8,8 +8,23 @@ type: software
 authors:
   - given-names: Dustin
     family-names: Franklin
-    affiliation: Nvidia
-repository-code: 'https://github.com/dusty-nv/jetson-containers'
+    affiliation: NVIDIA
+  - given-names: Ori
+    family-names: Nachum
+    affiliation: jetson-ai-lab
+repository-code: 'https://github.com/jetson-ai-lab/jetson-containers'
 url: 'https://www.jetson-ai-lab.com/'
 abstract: Machine Learning Containers for Jetson and JetPack
 license: MIT
+references:
+  - type: software
+    title: jetson-containers (upstream)
+    authors:
+      - given-names: Dustin
+        family-names: Franklin
+        affiliation: NVIDIA
+    repository-code: 'https://github.com/dusty-nv/jetson-containers'
+    license: MIT
+    notes: >-
+      This repository is a fork and substantial engine rework
+      of the upstream jetson-containers project.

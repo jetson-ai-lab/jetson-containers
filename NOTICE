@@ -1,0 +1,19 @@
+jetson-containers (jetson-ai-lab fork)
+
+This repository is derived from NVIDIA's jetson-containers project:
+  https://github.com/dusty-nv/jetson-containers
+
+Portions of this software are:
+  Copyright (c) 2026, NVIDIA CORPORATION. All rights reserved.
+  Distributed under the MIT license (see LICENSE.md).
+
+Modifications, restructuring, and new components for this fork are:
+  Copyright (c) 2026 jetson-ai-lab
+  Distributed under the MIT license (see LICENSE.md).
+
+Where upstream files carry their own copyright or SPDX header, that
+header is preserved as-is. Third-party components retained from upstream
+(e.g. HuggingFace LeRobot, Tri Dao / Albert Gu Mamba benchmarks) remain
+under their original licenses and copyrights.
+
+For academic citation of the original work, see CITATION.cff.

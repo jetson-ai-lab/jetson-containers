@@ -156,6 +156,16 @@ The project uses automated code formatting tools to maintain consistent code sty
 <a href="https://www.jetson-ai-lab.com/tutorial_nano-vlm.html#video-sequences"><img src="https://raw.githubusercontent.com/dusty-nv/jetson-containers/docs/docs/images/video_vila_wildfire.gif"></a>
 > [Realtime Video Vision/Language Model with VILA1.5-3b](https://www.jetson-ai-lab.com/tutorial_nano-vlm.html#video-sequences) (container: [`NanoLLM`](https://dusty-nv.github.io/NanoLLM/))
 
+## Upstream attribution
+
+This repository is a fork and substantial reworking of NVIDIA's
+[`dusty-nv/jetson-containers`](https://github.com/dusty-nv/jetson-containers)
+by [jetson-ai-lab](https://www.jetson-ai-lab.com).
+
+Inherited code retains its original NVIDIA copyright and MIT license.
+See [`NOTICE`](NOTICE) for attribution details and [`LICENSE.md`](LICENSE.md)
+for the full license text.
+
 ## Citation
 
 Please see [CITATION.cff](CITATION.cff) for citation information.
