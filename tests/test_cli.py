@@ -4,8 +4,10 @@ from __future__ import annotations
 import subprocess
 import sys
 
-from cli import __version__
-from cli.main import build_parser, main
+import pytest
+
+from jetson_cli import __version__
+from jetson_cli.main import build_parser, main
 
 
 def test_version_constant():
@@ -14,10 +16,9 @@ def test_version_constant():
 
 def test_parser_version(capsys):
     parser = build_parser()
-    try:
+    with pytest.raises(SystemExit) as excinfo:
         parser.parse_args(["--version"])
-    except SystemExit as exc:
-        assert exc.code == 0
+    assert excinfo.value.code == 0
     assert "jetson 0.0.1" in capsys.readouterr().out
 
 
@@ -28,7 +29,7 @@ def test_x_subcommand(capsys):
 
 def test_module_entry():
     result = subprocess.run(
-        [sys.executable, "-m", "cli", "--version"],
+        [sys.executable, "-m", "jetson_cli", "--version"],
         check=True,
         capture_output=True,
         text=True,

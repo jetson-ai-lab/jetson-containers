@@ -27,15 +27,18 @@ Homepage = "https://github.com/jetson-ai-lab/jetson-containers"
 Source = "https://github.com/jetson-ai-lab/jetson-containers"
 Issues = "https://github.com/jetson-ai-lab/jetson-containers/issues"
 
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
 [project.scripts]
-jetson = "cli.main:main"
+jetson = "jetson_cli.main:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["cli"]
+packages = ["jetson_cli"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "cli/",
+  "jetson_cli/",
   "packaging/README.jetson-cli.md",
   "packaging/README.jetson-containers.md",
   "LICENSE.md",

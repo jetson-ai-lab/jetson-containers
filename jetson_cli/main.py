@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from cli import __version__
+from jetson_cli import __version__
 
 
 def _cmd_x(args: argparse.Namespace) -> int:
