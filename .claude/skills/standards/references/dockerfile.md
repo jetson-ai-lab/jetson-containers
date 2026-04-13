@@ -4,11 +4,16 @@ Apply when authoring or editing a package `Dockerfile` (`packages/*/*/Dockerfile
 
 ## RUN layering (`docker:S7031`)
 
-Merge consecutive `RUN`s that form **one logical install unit** — an `apt-get update && apt-get install -y X Y && apt-get clean && rm -rf /var/lib/apt/lists/*` is one layer; a `pip install a b c` is one layer. Splitting them across separate `RUN`s inflates the image and may leave apt metadata stale across the gap.
+**Target: one install RUN per Dockerfile.** Merge aggressively. Sonar flags every consecutive-RUN pair, your image's layer count inflates with each RUN, and the Docker cache gets thinner the more you split. The earlier instinct to keep assimilai-vendored installs in separate `RUN`s "for provenance" was wrong — Docker layer boundaries are not the right place to record where code came from. Provenance lives in `.assimilai.toml` (source paths, sha256, `changes` notes); layer boundaries are just a cache-and-size knob. Don't conflate the two.
 
-**Don't merge** when each `RUN` represents a distinct provenance or cache concern that you deliberately want tracked independently — e.g. in the assimilai pattern (`packages/multimedia/sound-utils/Dockerfile`), each vendored-from-upstream install gets its own `RUN` so it matches a `[[sources.files]]` entry in `.assimilai.toml`. When you do keep them separate, put a one-line comment on the `RUN` naming the intent ("vendored from cudastack/install_cudss.sh — kept as its own layer for assimilai provenance"), so the next Sonar flag has a clean reply.
+**How to merge cleanly:**
+- Concatenate install steps with `\` + `;` (or `&&` where you want short-circuit-on-fail) under a single `RUN set -eux; ...`.
+- Use `# === <section-name> ===` comments *inside* the `RUN` to mark each logical section, and point each section at its `[[sources.files]]` entry in `.assimilai.toml` so the next reader can still trace provenance.
+- Keep ONLY verification / live-check RUNs as separate layers — see "Build-time vs runtime checks" below. Those aren't installs; they assert on what the install layer produced.
 
-**Always** end apt-install steps with `apt-get clean && rm -rf /var/lib/apt/lists/*` *in the same `RUN`* that populated them. Cleanup in a later layer doesn't reclaim the space.
+**Always** end apt-install steps with `apt-get clean && rm -rf /var/lib/apt/lists/*` *in the same `RUN`* that populated `/var/lib/apt/lists/`. Cleanup in a later layer doesn't reclaim the space.
+
+**Concrete exemplar:** `packages/multimedia/sound-utils/Dockerfile` bundles cuDNN + NVPL + cuDSS + cuSPARSELt + cuTENSOR + NCCL + torch + portaudio + soundfile/sounddevice into one `RUN`, with per-source `# === section ===` comments, and keeps the build-time torch-metadata check as its own (second) RUN. Result: 2 RUNs total, zero `docker:S7031` flags on the install side, full provenance preserved via `.assimilai.toml`.
 
 ## Bash in `RUN` + invoked scripts (`shelldre:S7688`)
 
@@ -61,5 +66,5 @@ Resolve the thread only when a fix actually landed. Leave it open if you pushed 
 
 - Don't silence Sonar / bot warnings by deleting comments or adding `// NOSONAR` blanket suppressions. If a finding doesn't apply, the right answer is a substantive PR reply (above), not suppression.
 - Don't push back on a Sonar finding in vendored code with "it's verbatim" if the fix is mechanical. Promote to `adapted`, record the `changes`, file the upstream issue. Reserve `verbatim` for cases where local fixes really aren't an option.
-- Don't merge a `RUN` that intentionally encodes provenance (assimilai per-source layer) just to silence `docker:S7031`. Comment the intent; reply on the thread.
+- Don't split installs into many small `RUN`s "for provenance". Merge into one install RUN; record provenance in `.assimilai.toml`; mark each section inline with `# === ... ===` comments. One install RUN + one verification RUN is the target shape.
 - Don't put live-GPU checks (`torch.cuda.is_available()`, GPU tensor ops) in a Dockerfile `RUN`. Put them in `test.py` / `test.sh`.
