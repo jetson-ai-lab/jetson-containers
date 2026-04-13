@@ -1,3 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jetson-cli"
+version = "0.0.1"
+description = "Jetson CLI — unified command-line interface for the Jetson AI Lab ecosystem."
+readme = "packaging/README.jetson-cli.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Jetson AI Lab" }]
+keywords = ["jetson", "nvidia", "edge-ai", "containers", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Software Development :: Build Tools",
+]
+
+[project.urls]
+Homepage = "https://github.com/jetson-ai-lab/jetson-containers"
+Source = "https://github.com/jetson-ai-lab/jetson-containers"
+Issues = "https://github.com/jetson-ai-lab/jetson-containers/issues"
+
+[project.scripts]
+jetson = "cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cli"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "cli/",
+  "packaging/README.jetson-cli.md",
+  "packaging/README.jetson-containers.md",
+  "LICENSE.md",
+  "pyproject.toml",
+]
+
 [tool.black]
 line-length = 88
 target-version = ['py38']
